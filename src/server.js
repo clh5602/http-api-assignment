@@ -6,44 +6,46 @@ const query = require('querystring');
 // pull in the response handler files
 const htmlHandler = require('./htmlResponses.js');
 // pull in our json response handler file
-//const jsonHandler = require('./jsonResponses.js');
+const requestHandler = require('./dataResponses.js');
 
 // set the port. process.env.PORT and NODE_PORT are for servers like heroku
 const port = process.env.PORT || process.env.NODE_PORT || 3000;
 
 // key:value object to look up URL routes to specific functions
 const urlStruct = {
-    GET: {
-        '/': htmlHandler.getIndex,
-        '/style.css': htmlHandler.getIndexCSS,
-        notFound: htmlHandler.getIndex,
-    },
-    HEAD: {
-        //'/getUsers': jsonHandler.getUsersMeta,
-        //notFound: jsonHandler.notFoundMeta,
-    },
+  '/': htmlHandler.getIndex,
+  '/style.css': htmlHandler.getIndexCSS,
+  '/success': requestHandler.generalResponse,
+  '/badRequest': requestHandler.generalResponse,
+  '/unauthorized': requestHandler.generalResponse,
+  '/forbidden': requestHandler.generalResponse,
+  '/internal': requestHandler.generalResponse,
+  '/notImplemented': requestHandler.generalResponse,
+  '/notFound': requestHandler.generalResponse,
+  notFound: requestHandler.notFound,
 };
 
 // handle HTTP requests. In node the HTTP server will automatically
 // send this function request and pre-filled response objects.
 const onRequest = (request, response) => {
-    // parse the url using the url module
-    const parsedUrl = url.parse(request.url);
+  // parse the url using the url module
+  const parsedUrl = url.parse(request.url);
 
-    // Only handle requests we support
-    if (!urlStruct[request.method]) {
-        return urlStruct.HEAD.notFound(request, response);
-    }
+  // if query provided, convert the query to a js object.
+  const params = query.parse(parsedUrl.query);
 
-    // if function exists, call it!
-    if (urlStruct[request.method][parsedUrl.pathname]) {
-        return urlStruct[request.method][parsedUrl.pathname](request, response);
-    }
+  // get the requested data types
+  const acceptedTypes = request.headers.accept.split(',');
 
-    return urlStruct[request.method].notFound(request, response);
+  // if function exists, call it!
+  if (urlStruct[parsedUrl.pathname]) {
+    return urlStruct[parsedUrl.pathname](request, response, acceptedTypes, params);
+  }
+
+  return urlStruct.notFound(request, response, acceptedTypes);
 };
 
 // start HTTP server
 http.createServer(onRequest).listen(port, () => {
-    console.log(`Listening on 127.0.0.1: ${port}`);
+  console.log(`Listening on 127.0.0.1: ${port}`);
 });
