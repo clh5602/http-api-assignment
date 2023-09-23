@@ -1,13 +1,110 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <title>Our simple HTTP server</title>
   <link rel="stylesheet" type="text/css" href="/style.css">
-  
+
   <script>
 
+    // returns the "message" attribute from the given data
+    const getMessageFromData = (data, type) => {
+
+      // xml response
+      if (type === 'text/xml') {
+        const parsedResponse = new window.DOMParser().parseFromString(data, 'text/xml');
+        return parsedResponse.querySelector('message').textContent;
+      }
+
+      // default json
+      const parsedResponse = JSON.parse(data);
+      return parsedResponse.message;
+    }
+
+    //A function for handling our fetch response. Read init and sendFetch first.
+    const handleResponse = async (response) => {
+
+      response.text().then((resText) => {
+
+        //Let's grab the Content-Type header from the response.
+        const contentType = response.headers.get('Content-Type');
+
+        //Grab the content section from the HTML so we can put things on the screen.
+        const content = document.querySelector('#content');
+
+        // clear the content
+        content.innerHTML = ``;
+
+        //Create some dom elements to display later
+        const h1 = document.createElement('h1');
+        const p = document.createElement('p');
+
+        //Update header based on status code
+        switch (response.status) {
+          case 200: //Success
+            h1.textContent = "Success";
+            break;
+          case 400: //Bad Request
+            h1.textContent = "Bad Request";
+            break;
+          case 401: //Unauthorized
+            h1.textContent = "Unauthorized";
+            break;
+          case 403: //Forbidden
+            h1.textContent = "Forbidden";
+            break;
+          case 404: //Not Found
+            h1.textContent = "Resource Not Found";
+            break;
+          case 500: //Internal Server Error
+            h1.textContent = "Internal Server Error";
+            break;
+          case 501: //Not Implemented
+            h1.textContent = "Not Implemented";
+            break;
+          default: //Anything Else
+            h1.textContent = "Status Code not Implemented";
+            break;
+        }
+
+        // fill p with the message from the response
+        const messageResponse = getMessageFromData(resText, contentType);
+        if (messageResponse) {
+          p.textContent = `Message: ${messageResponse}`;
+        }
+
+        //Add the elements to the screen.
+        content.appendChild(h1);
+        content.appendChild(p);
+        console.log(resText);
+      });
+    };
+
+
+    const sendFetch = async () => {
+      // check values of the dropdown boxes
+      const url = document.getElementById('page').value;
+      const type = document.getElementById('type').value;
+
+      // configure options
+      const options = {
+        method: 'GET',
+        headers: { 'Accept': type },
+      }
+
+      const fetchPromise = fetch(url, options);
+      fetchPromise.then((response) => { handleResponse(response) });
+    };
+
+    const init = () => {
+      const sendButton = document.getElementById('send');
+      sendButton.addEventListener('click', sendFetch);
+    };
+
+    window.onload = init;
   </script>
 </head>
+
 <body>
   <section id="top">
     <h3>Status Code Tests</h3>
@@ -29,4 +126,5 @@
   <section id="content">
   </section>
 </body>
+
 </html>
